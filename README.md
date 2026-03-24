@@ -50,3 +50,9 @@ Built on [SQL.js](https://github.com/sql-js/sql.js/) (SQLite compiled to WebAsse
 - SQL.js 1.11.0 (SQLite via WebAssembly)
 - JetBrains Mono + DM Sans (Google Fonts)
 - No build step, no framework, no backend
+
+---
+
+## License
+
+Copyright © Neil Southin. Free for personal use. Schools, colleges, and organisations wishing to use this in classrooms or on a VLE must get in touch first — see [LICENSE.md](LICENSE.md) for full details or email **southinn@colchsfc.ac.uk**.
