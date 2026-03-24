@@ -1,0 +1,1958 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSFC SQL Editor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.11.0/sql-wasm.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+  /* ── DARK THEME (default) ── */
+  [data-theme="dark"] {
+    --bg-dark: #0f1117;
+    --bg-panel: #181a24;
+    --bg-input: #1e2030;
+    --bg-hover: #252840;
+    --border: #2a2d42;
+    --border-focus: #5b6abf;
+    --accent: #6c7ae0;
+    --accent-bright: #8b96ff;
+    --accent-glow: rgba(108, 122, 224, 0.15);
+    --text: #c9cde8;
+    --text-bright: #e8ebff;
+    --text-dim: #6b7094;
+    --success: #4ade80;
+    --success-bg: rgba(74, 222, 128, 0.1);
+    --error: #f87171;
+    --error-bg: rgba(248, 113, 113, 0.1);
+    --warning: #fbbf24;
+    --college-gold: #d4a843;
+    --college-navy: #1a2744;
+    --header-bg: linear-gradient(135deg, #1a2744 0%, #0f1117 100%);
+    --modal-backdrop: rgba(0,0,0,0.6);
+    --shadow: rgba(0,0,0,0.3);
+    --table-stripe: rgba(255,255,255,0.02);
+  }
+
+  /* ── LIGHT THEME ── */
+  [data-theme="light"] {
+    --bg-dark: #f4f5f8;
+    --bg-panel: #ffffff;
+    --bg-input: #f0f1f5;
+    --bg-hover: #e8eaf0;
+    --border: #d5d8e0;
+    --border-focus: #6c7ae0;
+    --accent: #5563d4;
+    --accent-bright: #4452c5;
+    --accent-glow: rgba(85, 99, 212, 0.1);
+    --text: #3a3f55;
+    --text-bright: #1a1e30;
+    --text-dim: #8b90a6;
+    --success: #16a34a;
+    --success-bg: rgba(22, 163, 74, 0.08);
+    --error: #dc2626;
+    --error-bg: rgba(220, 38, 38, 0.06);
+    --warning: #ca8a04;
+    --college-gold: #b8912e;
+    --college-navy: #1a2744;
+    --header-bg: linear-gradient(135deg, #1a2744 0%, #2a3a5c 100%);
+    --modal-backdrop: rgba(0,0,0,0.35);
+    --shadow: rgba(0,0,0,0.08);
+    --table-stripe: rgba(0,0,0,0.02);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg-dark);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .header-crest {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #d4a843, #b8912e);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--college-navy);
+    letter-spacing: -0.5px;
+  }
+
+  .header-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #e8ebff;
+    letter-spacing: -0.3px;
+  }
+
+  .header-title span { color: #d4a843; font-weight: 700; }
+
+  .header-subtitle {
+    font-size: 11px;
+    color: #8b90b0;
+    margin-top: -1px;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* ── THEME TOGGLE ── */
+  .theme-toggle {
+    width: 46px;
+    height: 24px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.1);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.25s ease;
+    flex-shrink: 0;
+  }
+
+  .theme-toggle:hover {
+    border-color: rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.15);
+  }
+
+  .theme-toggle-knob {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.25s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  [data-theme="light"] .theme-toggle-knob {
+    transform: translateX(22px);
+  }
+
+  .theme-label {
+    font-size: 11px;
+    color: #8b90b0;
+  }
+
+  /* Header buttons always on dark background */
+  .header .btn {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.12);
+    color: #c9cde8;
+  }
+
+  .header .btn:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.25);
+    color: #fff;
+  }
+
+  /* ── TOOLBAR ── */
+  .toolbar {
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    padding: 6px 16px;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    transition: background 0.25s ease;
+  }
+
+  .toolbar-group {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .toolbar-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+    margin: 0 8px;
+  }
+
+  .btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-input);
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-focus);
+    color: var(--text-bright);
+  }
+
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-bright);
+    border-color: var(--accent-bright);
+  }
+
+  .btn-success {
+    background: var(--success-bg);
+    border-color: var(--success);
+    color: var(--success);
+  }
+
+  .btn-success:hover { opacity: 0.85; }
+
+  .btn-warning {
+    background: rgba(251, 191, 36, 0.12);
+    border-color: rgba(251, 191, 36, 0.3);
+    color: var(--warning);
+  }
+
+  .btn-warning:hover { opacity: 0.85; }
+
+  .btn-icon { font-size: 14px; line-height: 1; }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 260px;
+    min-width: 260px;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: background 0.25s ease;
+  }
+
+  .sidebar-header {
+    padding: 12px 14px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 8px 12px;
+  }
+
+  .sidebar-content::-webkit-scrollbar { width: 5px; }
+  .sidebar-content::-webkit-scrollbar-track { background: transparent; }
+  .sidebar-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .table-item { border-radius: 6px; margin-bottom: 2px; overflow: hidden; }
+
+  .table-header {
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.1s;
+    border-radius: 6px;
+  }
+
+  .table-header:hover { background: var(--bg-hover); }
+
+  .table-header.active {
+    background: var(--accent-glow);
+    color: var(--accent-bright);
+  }
+
+  .table-icon { font-size: 14px; opacity: 0.6; }
+
+  .table-name {
+    flex: 1;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .table-count {
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--bg-input);
+    padding: 1px 6px;
+    border-radius: 8px;
+  }
+
+  .table-columns { display: none; padding: 2px 0 6px 30px; }
+  .table-columns.show { display: block; }
+
+  .col-item {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 3px 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 4px;
+    cursor: default;
+  }
+
+  .col-item:hover { background: var(--bg-hover); color: var(--text); }
+  .col-pk { color: var(--college-gold); }
+  .col-fk { color: var(--accent-bright); }
+  .col-type { font-size: 9px; color: var(--text-dim); margin-left: auto; opacity: 0.7; }
+
+  .no-tables {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  /* ── WORKSPACE ── */
+  .workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .tab-bar {
+    display: flex;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    transition: background 0.25s ease;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tab:hover { color: var(--text); background: var(--bg-hover); }
+
+  .tab.active {
+    color: var(--accent-bright);
+    border-bottom-color: var(--accent);
+    background: var(--accent-glow);
+  }
+
+  .tab-emoji { font-size: 13px; }
+
+  .panel { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+  .panel.active { display: flex; }
+
+  /* ── SQL EDITOR ── */
+  .editor-area { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+  .editor-container {
+    position: relative;
+    flex: 0 0 200px;
+    min-height: 100px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .editor-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    padding: 8px 14px 4px;
+    background: var(--bg-panel);
+    transition: background 0.25s ease;
+  }
+
+  #sqlInput {
+    flex: 1;
+    background: var(--bg-input);
+    color: var(--text-bright);
+    border: none;
+    padding: 10px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+    tab-size: 2;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+
+  #sqlInput::placeholder { color: var(--text-dim); }
+
+  .editor-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    transition: background 0.25s ease;
+  }
+
+  .editor-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .editor-hint kbd {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 10px;
+  }
+
+  .results-area {
+    flex: 1;
+    overflow: auto;
+    background: var(--bg-dark);
+    transition: background 0.25s ease;
+  }
+
+  .results-area::-webkit-scrollbar { width: 8px; height: 8px; }
+  .results-area::-webkit-scrollbar-track { background: var(--bg-dark); }
+  .results-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .result-block { margin: 8px; }
+
+  .result-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .result-label .badge { font-size: 10px; padding: 1px 8px; border-radius: 8px; }
+  .badge-success { background: var(--success-bg); color: var(--success); }
+  .badge-error { background: var(--error-bg); color: var(--error); }
+  .badge-rows { background: var(--accent-glow); color: var(--accent-bright); }
+
+  .result-message {
+    padding: 10px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    border-radius: 6px;
+    margin: 4px 0;
+  }
+
+  .result-message.success {
+    background: var(--success-bg);
+    color: var(--success);
+    border: 1px solid var(--success);
+  }
+
+  .result-message.error {
+    background: var(--error-bg);
+    color: var(--error);
+    border: 1px solid var(--error);
+  }
+
+  /* ── DATA TABLE ── */
+  .data-table-wrapper {
+    overflow: auto;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    margin: 4px 0;
+  }
+
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+  .data-table th {
+    background: var(--bg-panel);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-bright);
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    white-space: nowrap;
+  }
+
+  .data-table td {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .data-table tr:nth-child(even) td { background: var(--table-stripe); }
+  .data-table tr:hover td { background: var(--bg-hover); }
+  .data-table td.null-val { color: var(--text-dim); font-style: italic; }
+
+  /* ── ERD ── */
+  .erd-container {
+    flex: 1; overflow: auto; padding: 20px;
+    background: var(--bg-dark); position: relative;
+    transition: background 0.25s ease;
+  }
+
+  .erd-canvas { position: relative; min-width: 100%; min-height: 100%; }
+
+  .erd-table {
+    position: absolute;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    min-width: 180px;
+    box-shadow: 0 4px 20px var(--shadow);
+    cursor: move;
+    user-select: none;
+    z-index: 2;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .erd-table:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 24px rgba(108, 122, 224, 0.15);
+  }
+
+  .erd-table-name {
+    padding: 8px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent-bright);
+    background: var(--accent-glow);
+    border-bottom: 1px solid var(--border);
+    border-radius: 8px 8px 0 0;
+  }
+
+  .erd-col {
+    padding: 4px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .erd-col:last-child { border-bottom: none; }
+  .erd-col-name { font-weight: 500; }
+  .erd-col-type { color: var(--text-dim); }
+  .erd-col-pk { color: var(--college-gold); }
+  .erd-col-fk { color: var(--accent-bright); }
+
+  .erd-empty {
+    display: flex; align-items: center; justify-content: center;
+    height: 100%; color: var(--text-dim); font-size: 14px;
+  }
+
+  .erd-svg {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 1;
+    overflow: visible;
+  }
+
+  .erd-svg path.erd-line, .erd-svg line.erd-line { stroke: var(--accent); stroke-width: 1.5; opacity: 0.5; fill: none; }
+  .erd-svg .erd-crow { stroke: var(--accent); stroke-width: 1.8; fill: none; opacity: 0.75; }
+  .erd-svg .erd-one-mark { stroke: var(--accent); stroke-width: 1.8; opacity: 0.75; }
+  .erd-svg .erd-label-bg { fill: var(--bg-dark); stroke: var(--border); stroke-width: 0.5; rx: 4; ry: 4; }
+  .erd-svg text.erd-label-text { fill: var(--text-dim); font-size: 9px; font-family: 'JetBrains Mono', monospace; }
+
+  /* ── BROWSER CONTROLS ── */
+  .browser-controls {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px; background: var(--bg-panel);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+    transition: background 0.25s ease;
+  }
+
+  .browser-controls select {
+    font-family: 'DM Sans', sans-serif; font-size: 12px;
+    padding: 5px 10px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg-input);
+    color: var(--text); outline: none;
+  }
+
+  .browser-controls select:focus { border-color: var(--border-focus); }
+  .browser-controls label { font-size: 12px; color: var(--text-dim); }
+
+  /* ── HISTORY ── */
+  .history-list { flex: 1; overflow-y: auto; padding: 8px; }
+
+  .history-item {
+    padding: 8px 12px; border-radius: 6px; margin-bottom: 4px;
+    cursor: pointer; transition: background 0.1s; border: 1px solid transparent;
+  }
+
+  .history-item:hover { background: var(--bg-hover); border-color: var(--border); }
+
+  .history-sql {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .history-meta { font-size: 10px; color: var(--text-dim); margin-top: 3px; display: flex; gap: 10px; }
+
+  /* ── EXAMPLES ── */
+  .examples-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px; padding: 12px; overflow-y: auto; flex: 1;
+  }
+
+  .example-card {
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px; cursor: pointer; transition: all 0.15s;
+  }
+
+  .example-card:hover { border-color: var(--accent); background: var(--bg-hover); transform: translateY(-1px); }
+
+  .example-card-title { font-size: 13px; font-weight: 600; color: var(--text-bright); margin-bottom: 6px; }
+
+  .example-card-sql {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--accent-bright); background: var(--bg-input);
+    padding: 8px 10px; border-radius: 5px; white-space: pre-wrap; line-height: 1.5;
+  }
+
+  .example-card-desc { font-size: 11px; color: var(--text-dim); margin-top: 6px; line-height: 1.4; }
+
+  /* ── STATUS BAR ── */
+  .statusbar {
+    background: var(--bg-panel); border-top: 1px solid var(--border);
+    padding: 4px 16px; display: flex; align-items: center;
+    justify-content: space-between; font-size: 11px; color: var(--text-dim);
+    flex-shrink: 0; transition: background 0.25s ease;
+  }
+
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .status-dot.connected { background: var(--success); }
+  .status-dot.empty { background: var(--warning); }
+
+  .hidden { display: none; }
+
+  .resize-handle { height: 4px; background: transparent; cursor: ns-resize; position: relative; flex-shrink: 0; }
+  .resize-handle:hover, .resize-handle.dragging { background: var(--accent); }
+
+  /* ── WELCOME ── */
+  .welcome {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; flex: 1; padding: 40px;
+    text-align: center; color: var(--text-dim);
+  }
+
+  .welcome-logo {
+    width: 64px; height: 64px;
+    background: linear-gradient(135deg, #d4a843, #b8912e);
+    border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 24px; color: var(--college-navy); margin-bottom: 16px;
+  }
+
+  .welcome h2 { font-size: 18px; color: var(--text-bright); margin-bottom: 8px; }
+  .welcome p { font-size: 13px; max-width: 400px; line-height: 1.6; margin-bottom: 20px; }
+  .welcome-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+  /* ── LOADING ── */
+  .loading-overlay {
+    position: fixed; inset: 0; background: var(--bg-dark);
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; z-index: 999; transition: opacity 0.3s;
+  }
+
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .loading-spinner {
+    width: 40px; height: 40px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin-bottom: 16px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--text-dim); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: var(--modal-backdrop);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
+  }
+
+  .modal-overlay.hidden { display: none; }
+
+  .modal {
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; max-width: 560px; width: 92%;
+    box-shadow: 0 20px 60px var(--shadow);
+  }
+
+  .modal h3 { font-size: 16px; color: var(--text-bright); margin-bottom: 12px; }
+  .modal p, .modal label { font-size: 13px; color: var(--text-dim); line-height: 1.6; margin-bottom: 10px; display: block; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+  .modal input[type="text"],
+  .modal select {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--bg-input); color: var(--text-bright);
+    width: 100%; outline: none; margin-bottom: 10px;
+  }
+
+  .modal input[type="text"]:focus,
+  .modal select:focus { border-color: var(--border-focus); }
+
+  .csv-preview-wrapper {
+    max-height: 180px; overflow: auto;
+    border: 1px solid var(--border); border-radius: 6px; margin: 8px 0;
+  }
+
+  .csv-preview-wrapper table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+
+  .csv-preview-wrapper th {
+    background: var(--bg-panel); padding: 5px 8px; text-align: left;
+    border-bottom: 1px solid var(--border); color: var(--accent-bright);
+    font-weight: 600; position: sticky; top: 0;
+  }
+
+  .csv-preview-wrapper td {
+    padding: 4px 8px; border-bottom: 1px solid var(--border); color: var(--text);
+  }
+
+  .csv-info {
+    font-size: 11px; color: var(--text-dim); margin: 6px 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Initialising SQLite WASM engine&hellip;</div>
+</div>
+
+<!-- NEW DB MODAL -->
+<div class="modal-overlay hidden" id="newDbModal">
+  <div class="modal">
+    <h3>Create New Database</h3>
+    <p>This will clear the current database and create a fresh empty one. Any unsaved changes will be lost.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('newDbModal')">Cancel</button>
+      <button class="btn btn-warning" onclick="confirmNewDb()">Create New Database</button>
+    </div>
+  </div>
+</div>
+
+<!-- CSV IMPORT MODAL -->
+<div class="modal-overlay hidden" id="csvModal">
+  <div class="modal">
+    <h3>&#128203; Import CSV as Table</h3>
+    <div id="csvModalBody">
+      <p>Select a CSV file to import as a new table.</p>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-brand">
+    <div class="header-crest">CSFC</div>
+    <div>
+      <div class="header-title"><span>Colchester Sixth Form College</span> &mdash; SQL Editor</div>
+      <div class="header-subtitle">Browser-based SQLite &middot; Powered by WASM</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn" onclick="showSampleDb()" title="Load a sample database to explore">
+      <span class="btn-icon">&#128218;</span> Sample DB
+    </button>
+    <span class="theme-label" id="themeLabel">Dark</span>
+    <div class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+      <div class="theme-toggle-knob" id="themeKnob">&#127769;</div>
+    </div>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <div class="toolbar-group">
+    <button class="btn" onclick="promptNewDb()" title="Create a new empty database">
+      <span class="btn-icon">&#128196;</span> New
+    </button>
+    <button class="btn" onclick="openDbFile()" title="Open a .db SQLite file">
+      <span class="btn-icon">&#128194;</span> Open .db
+    </button>
+    <button class="btn" onclick="openSqlFile()" title="Load and run a .sql script">
+      <span class="btn-icon">&#128220;</span> Load .sql
+    </button>
+    <button class="btn" onclick="openCsvFile()" title="Import a CSV file as a new table">
+      <span class="btn-icon">&#128203;</span> Import CSV
+    </button>
+    <button class="btn btn-success" onclick="saveDbFile()" title="Download the database as a .db file">
+      <span class="btn-icon">&#128190;</span> Save .db
+    </button>
+  </div>
+  <div class="toolbar-divider"></div>
+  <div class="toolbar-group">
+    <button class="btn btn-primary" onclick="executeQuery()" title="Run query (Ctrl+Enter)">
+      <span class="btn-icon">&#9654;</span> Run Query
+    </button>
+    <button class="btn" onclick="clearEditor()" title="Clear editor">
+      <span class="btn-icon">&#128465;</span> Clear
+    </button>
+  </div>
+  <div class="toolbar-divider"></div>
+  <div class="toolbar-group">
+    <button class="btn" onclick="exportResultsCsv()" title="Export results as CSV">
+      <span class="btn-icon">&#128202;</span> Export CSV
+    </button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span>Schema &middot; Tables</span>
+      <button class="btn" style="padding:3px 7px;font-size:10px;" onclick="refreshSchema()" title="Refresh">&#8635;</button>
+    </div>
+    <div class="sidebar-content" id="schemaList">
+      <div class="no-tables" id="noTablesMsg">
+        <div style="font-size:24px;margin-bottom:8px;">&#128451;</div>
+        No tables yet.<br>Load a database or create tables with SQL.
+      </div>
+    </div>
+  </div>
+
+  <div class="workspace">
+    <div class="tab-bar">
+      <div class="tab active" data-tab="sql" onclick="switchTab('sql')"><span class="tab-emoji">&#9000;</span> SQL Editor</div>
+      <div class="tab" data-tab="browse" onclick="switchTab('browse')"><span class="tab-emoji">&#128451;</span> Browse Data</div>
+      <div class="tab" data-tab="erd" onclick="switchTab('erd')"><span class="tab-emoji">&#128296;</span> ERD</div>
+      <div class="tab" data-tab="history" onclick="switchTab('history')"><span class="tab-emoji">&#128337;</span> History</div>
+      <div class="tab" data-tab="examples" onclick="switchTab('examples')"><span class="tab-emoji">&#128218;</span> SQL Examples</div>
+    </div>
+
+    <!-- SQL PANEL -->
+    <div class="panel active" id="panel-sql">
+      <div class="editor-area">
+        <div class="editor-container" id="editorContainer">
+          <div class="editor-label">SQL Query</div>
+          <textarea id="sqlInput" placeholder="-- Write your SQL here...&#10;-- Press Ctrl+Enter to execute&#10;&#10;SELECT * FROM tablename;" spellcheck="false"></textarea>
+        </div>
+        <div class="resize-handle" id="resizeHandle"></div>
+        <div class="editor-footer">
+          <div class="editor-hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to run &middot; <kbd>Ctrl</kbd> + <kbd>L</kbd> to clear</div>
+          <span id="queryTime" style="font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;"></span>
+        </div>
+        <div class="results-area" id="resultsArea">
+          <div class="welcome" id="welcomeScreen">
+            <div class="welcome-logo">SQL</div>
+            <h2>Welcome to the CSFC SQL Editor</h2>
+            <p>Write SQL queries to create, modify, and interrogate databases &mdash; everything runs entirely in your browser using WebAssembly.</p>
+            <div class="welcome-actions">
+              <button class="btn" onclick="showSampleDb()">&#128218; Load Sample DB</button>
+              <button class="btn" onclick="openDbFile()">&#128194; Open .db File</button>
+              <button class="btn" onclick="openSqlFile()">&#128220; Load .sql File</button>
+              <button class="btn" onclick="openCsvFile()">&#128203; Import CSV</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BROWSE PANEL -->
+    <div class="panel" id="panel-browse">
+      <div class="browser-controls">
+        <label for="browseTableSelect">Table:</label>
+        <select id="browseTableSelect" onchange="browseTable()"></select>
+        <button class="btn" onclick="browseTable()" style="padding:4px 10px;font-size:11px;">&#8635; Refresh</button>
+        <span id="browseRowCount" style="font-size:11px;color:var(--text-dim);margin-left:auto;"></span>
+      </div>
+      <div class="results-area" id="browseResults" style="flex:1;"></div>
+    </div>
+
+    <!-- ERD PANEL -->
+    <div class="panel" id="panel-erd">
+      <div class="erd-container" id="erdContainer">
+        <div class="erd-empty" id="erdEmpty">
+          <div>
+            <div style="font-size:32px;margin-bottom:12px;">&#128296;</div>
+            <div>No tables to display.</div>
+            <div style="font-size:12px;margin-top:4px;">Create some tables or load a database to see the ERD.</div>
+          </div>
+        </div>
+        <svg class="erd-svg" id="erdSvg"></svg>
+        <div class="erd-canvas" id="erdCanvas"></div>
+      </div>
+    </div>
+
+    <!-- HISTORY PANEL -->
+    <div class="panel" id="panel-history">
+      <div style="padding:8px 14px;display:flex;justify-content:space-between;align-items:center;background:var(--bg-panel);border-bottom:1px solid var(--border);flex-shrink:0;">
+        <span style="font-size:12px;color:var(--text-dim);">Query History (this session)</span>
+        <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="clearHistory()">Clear History</button>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="no-tables" style="padding:40px;">No queries run yet.</div>
+      </div>
+    </div>
+
+    <!-- EXAMPLES PANEL -->
+    <div class="panel" id="panel-examples">
+      <div class="examples-grid" id="examplesGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <div>
+    <span class="status-dot empty" id="statusDot"></span>
+    <span id="statusText">No database loaded</span>
+  </div>
+  <div>SQLite via sql.js WASM &middot; CSFC Computer Science</div>
+</div>
+
+<!-- HIDDEN FILE INPUTS -->
+<input type="file" class="hidden" id="dbFileInput" accept=".db,.sqlite,.sqlite3">
+<input type="file" class="hidden" id="sqlFileInput" accept=".sql,.txt">
+<input type="file" class="hidden" id="csvFileInput" accept=".csv,.tsv,.txt">
+
+<script>
+// ══════════════════════════════════════════════════
+// CSFC SQL Editor — Main Application
+// ══════════════════════════════════════════════════
+
+let db = null;
+let SQL = null;
+let queryHistory = [];
+let lastResults = null;
+let erdPositions = {};
+let pendingCsvData = null;
+
+// ── INITIALISATION ──
+async function init() {
+  try {
+    SQL = await initSqlJs({
+      locateFile: function(file) {
+        return "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.11.0/" + file;
+      }
+    });
+    db = new SQL.Database();
+    updateStatus("Empty database ready", true);
+    setupEventListeners();
+    loadExamples();
+    loadThemePreference();
+    document.getElementById("loadingOverlay").classList.add("hidden");
+  } catch (err) {
+    document.querySelector(".loading-text").textContent = "Error loading SQL engine: " + err.message;
+    console.error(err);
+  }
+}
+
+// ── THEME ──
+function toggleTheme() {
+  let html = document.documentElement;
+  let next = html.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  html.setAttribute("data-theme", next);
+  document.getElementById("themeLabel").textContent = next === "dark" ? "Dark" : "Light";
+  document.getElementById("themeKnob").innerHTML = next === "dark" ? "&#127769;" : "&#9728;&#65039;";
+  try { localStorage.setItem("csfc-sql-theme", next); } catch (e) {}
+}
+
+function loadThemePreference() {
+  try {
+    let saved = localStorage.getItem("csfc-sql-theme");
+    if (saved === "light") {
+      document.documentElement.setAttribute("data-theme", "light");
+      document.getElementById("themeLabel").textContent = "Light";
+      document.getElementById("themeKnob").innerHTML = "&#9728;&#65039;";
+    }
+  } catch (e) {}
+}
+
+// ── EVENT LISTENERS ──
+function setupEventListeners() {
+  document.getElementById("sqlInput").addEventListener("keydown", function(e) {
+    if (e.ctrlKey && e.key === "Enter") { e.preventDefault(); executeQuery(); }
+    if (e.ctrlKey && e.key === "l") { e.preventDefault(); clearEditor(); }
+    if (e.key === "Tab") {
+      e.preventDefault();
+      let s = this.selectionStart, en = this.selectionEnd;
+      this.value = this.value.substring(0, s) + "  " + this.value.substring(en);
+      this.selectionStart = this.selectionEnd = s + 2;
+    }
+  });
+  document.getElementById("dbFileInput").addEventListener("change", handleDbFile);
+  document.getElementById("sqlFileInput").addEventListener("change", handleSqlFile);
+  document.getElementById("csvFileInput").addEventListener("change", handleCsvFile);
+  setupResize();
+}
+
+// ── FILE HANDLING ──
+function openDbFile() { document.getElementById("dbFileInput").click(); }
+function openSqlFile() { document.getElementById("sqlFileInput").click(); }
+function openCsvFile() { document.getElementById("csvFileInput").click(); }
+
+function handleDbFile(e) {
+  let file = e.target.files[0];
+  if (!file) return;
+  let reader = new FileReader();
+  reader.onload = function() {
+    try {
+      if (db) db.close();
+      db = new SQL.Database(new Uint8Array(reader.result));
+      updateStatus("Loaded: " + file.name, true);
+      refreshSchema();
+      switchTab("sql");
+      showNotification("Database loaded: " + file.name, "success");
+    } catch (err) {
+      showNotification("Error loading database: " + err.message, "error");
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = "";
+}
+
+function handleSqlFile(e) {
+  let file = e.target.files[0];
+  if (!file) return;
+  let reader = new FileReader();
+  reader.onload = function() {
+    document.getElementById("sqlInput").value = reader.result;
+    switchTab("sql");
+    showNotification("SQL file loaded: " + file.name + " — press Run Query to execute", "success");
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+}
+
+function saveDbFile() {
+  if (!db) { showNotification("No database to save", "error"); return; }
+  let data = db.export();
+  let blob = new Blob([data], { type: "application/x-sqlite3" });
+  let url = URL.createObjectURL(blob);
+  let a = document.createElement("a");
+  a.href = url;
+  a.download = "database.db";
+  a.click();
+  URL.revokeObjectURL(url);
+  showNotification("Database saved as database.db", "success");
+}
+
+// ── CSV IMPORT ──
+function handleCsvFile(e) {
+  let file = e.target.files[0];
+  if (!file) return;
+  let reader = new FileReader();
+  reader.onload = function() {
+    let parsed = parseCsv(reader.result);
+    if (!parsed || parsed.headers.length === 0) {
+      showNotification("Could not parse CSV — check the format", "error");
+      return;
+    }
+    pendingCsvData = parsed;
+    let suggestedName = file.name
+      .replace(/\.[^.]+$/, "")
+      .replace(/[^a-zA-Z0-9_]/g, "_")
+      .replace(/^(\d)/, "_$1")
+      .toLowerCase();
+    showCsvModal(suggestedName, parsed);
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+}
+
+function parseCsv(raw) {
+  let firstLine = raw.split("\n")[0];
+  let delimiter = ",";
+  let tabs = (firstLine.match(/\t/g) || []).length;
+  let commas = (firstLine.match(/,/g) || []).length;
+  let semis = (firstLine.match(/;/g) || []).length;
+  if (tabs > commas && tabs > semis) delimiter = "\t";
+  else if (semis > commas) delimiter = ";";
+
+  let lines = raw.trim().split("\n");
+  if (lines.length < 1) return null;
+
+  function parseLine(line) {
+    let fields = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      let ch = line[i];
+      if (inQuotes) {
+        if (ch === '"' && i + 1 < line.length && line[i + 1] === '"') { current += '"'; i++; }
+        else if (ch === '"') { inQuotes = false; }
+        else { current += ch; }
+      } else {
+        if (ch === '"') { inQuotes = true; }
+        else if (ch === delimiter) { fields.push(current.trim()); current = ""; }
+        else { current += ch; }
+      }
+    }
+    fields.push(current.trim());
+    return fields;
+  }
+
+  let headers = parseLine(lines[0]);
+  let rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    let line = lines[i].trim();
+    if (line === "") continue;
+    rows.push(parseLine(line));
+  }
+  return { headers: headers, rows: rows, delimiter: delimiter };
+}
+
+function showCsvModal(suggestedName, parsed) {
+  let body = document.getElementById("csvModalBody");
+
+  let previewRows = parsed.rows.slice(0, 5);
+  let tbl = '<table><thead><tr>';
+  parsed.headers.forEach(function(h) { tbl += '<th>' + escapeHtml(h) + '</th>'; });
+  tbl += '</tr></thead><tbody>';
+  previewRows.forEach(function(row) {
+    tbl += '<tr>';
+    parsed.headers.forEach(function(_, idx) { tbl += '<td>' + escapeHtml(row[idx] || "") + '</td>'; });
+    tbl += '</tr>';
+  });
+  tbl += '</tbody></table>';
+
+  let delimName = parsed.delimiter === "\t" ? "tab" : parsed.delimiter === ";" ? "semicolon" : "comma";
+
+  body.innerHTML =
+    '<div class="csv-info">Detected delimiter: <strong>' + delimName + '</strong> &middot; ' +
+    parsed.headers.length + ' columns &middot; ' + parsed.rows.length + ' rows</div>' +
+    '<label>Table name:</label>' +
+    '<input type="text" id="csvTableName" value="' + escapeHtml(suggestedName) + '">' +
+    '<label>Preview (first 5 rows):</label>' +
+    '<div class="csv-preview-wrapper">' + tbl + '</div>' +
+    '<p style="font-size:11px;">Column types are detected automatically (INTEGER, REAL, or TEXT).</p>' +
+    '<div class="modal-actions">' +
+    '  <button class="btn" onclick="closeModal(\'csvModal\')">Cancel</button>' +
+    '  <button class="btn btn-primary" onclick="confirmCsvImport()">Import Table</button>' +
+    '</div>';
+
+  document.getElementById("csvModal").classList.remove("hidden");
+}
+
+function confirmCsvImport() {
+  if (!pendingCsvData || !db) return;
+
+  let tableName = document.getElementById("csvTableName").value.trim()
+    .replace(/[^a-zA-Z0-9_]/g, "_");
+  if (/^\d/.test(tableName)) tableName = "_" + tableName;
+  if (!tableName) { showNotification("Please enter a table name", "error"); return; }
+
+  let headers = pendingCsvData.headers;
+  let rows = pendingCsvData.rows;
+
+  // Detect column types from first 20 rows
+  let colTypes = headers.map(function(_, colIdx) {
+    let isInt = true, isReal = true, samples = 0;
+    for (let r = 0; r < Math.min(rows.length, 20); r++) {
+      let val = (rows[r][colIdx] || "").trim();
+      if (val === "") continue;
+      samples++;
+      if (isInt && !/^-?\d+$/.test(val)) isInt = false;
+      if (isReal && isNaN(parseFloat(val))) isReal = false;
+    }
+    if (samples === 0) return "TEXT";
+    if (isInt) return "INTEGER";
+    if (isReal) return "REAL";
+    return "TEXT";
+  });
+
+  // Sanitise column names
+  let safeHeaders = headers.map(function(h) {
+    let s = h.replace(/[^a-zA-Z0-9_]/g, "_").replace(/^(\d)/, "_$1");
+    return s || "col";
+  });
+
+  // Make unique
+  let seen = {};
+  safeHeaders = safeHeaders.map(function(h) {
+    if (seen[h]) { let c = seen[h]; seen[h] = c + 1; return h + "_" + c; }
+    seen[h] = 1;
+    return h;
+  });
+
+  try {
+    let createCols = safeHeaders.map(function(h, i) {
+      return '"' + h + '" ' + colTypes[i];
+    }).join(", ");
+    let createSql = 'CREATE TABLE IF NOT EXISTS "' + tableName + '" (' + createCols + ')';
+    db.run(createSql);
+
+    let placeholders = safeHeaders.map(function() { return "?"; }).join(", ");
+    let insertSql = 'INSERT INTO "' + tableName + '" VALUES (' + placeholders + ')';
+    let stmt = db.prepare(insertSql);
+
+    rows.forEach(function(row) {
+      let values = safeHeaders.map(function(_, colIdx) {
+        let val = (row[colIdx] || "").trim();
+        if (val === "") return null;
+        if (colTypes[colIdx] === "INTEGER") return parseInt(val, 10);
+        if (colTypes[colIdx] === "REAL") return parseFloat(val);
+        return val;
+      });
+      stmt.run(values);
+    });
+    stmt.free();
+
+    closeModal("csvModal");
+    pendingCsvData = null;
+    refreshSchema();
+    updateStatus("Imported CSV as table: " + tableName, true);
+    showNotification("Imported " + rows.length + " rows into '" + tableName + "'", "success");
+
+    document.getElementById("sqlInput").value =
+      "-- CSV imported as table '" + tableName + "'\n-- Generated SQL:\n" +
+      createSql + ";\n\nSELECT * FROM \"" + tableName + "\" LIMIT 20;";
+    switchTab("sql");
+  } catch (err) {
+    showNotification("CSV import error: " + err.message, "error");
+  }
+}
+
+// ── NEW DATABASE ──
+function promptNewDb() { document.getElementById("newDbModal").classList.remove("hidden"); }
+
+function closeModal(id) { document.getElementById(id).classList.add("hidden"); }
+
+function confirmNewDb() {
+  closeModal("newDbModal");
+  if (db) db.close();
+  db = new SQL.Database();
+  refreshSchema();
+  clearResults();
+  updateStatus("New empty database created", true);
+  showNotification("New empty database created", "success");
+}
+
+// ── QUERY EXECUTION ──
+function executeQuery() {
+  let sql = document.getElementById("sqlInput").value.trim();
+  if (!sql) return;
+  if (!db) { showNotification("No database loaded", "error"); return; }
+
+  let welcome = document.getElementById("welcomeScreen");
+  if (welcome) welcome.style.display = "none";
+
+  let resultsArea = document.getElementById("resultsArea");
+  let start = performance.now();
+  let results = [];
+  let errorMsg = null;
+
+  try { results = db.exec(sql); lastResults = results; }
+  catch (err) { errorMsg = err.message; }
+
+  let elapsed = (performance.now() - start).toFixed(1);
+  document.getElementById("queryTime").textContent = elapsed + "ms";
+  addToHistory(sql, !errorMsg, elapsed);
+
+  let html = "";
+  if (errorMsg) {
+    html += '<div class="result-block"><div class="result-label"><span class="badge badge-error">ERROR</span></div>';
+    html += '<div class="result-message error">' + escapeHtml(errorMsg) + '</div></div>';
+  } else if (results.length === 0) {
+    html += '<div class="result-block"><div class="result-label"><span class="badge badge-success">OK</span> Query executed successfully</div>';
+    html += '<div class="result-message success">Statement executed. No rows returned.</div></div>';
+  } else {
+    results.forEach(function(result, idx) {
+      html += '<div class="result-block"><div class="result-label">';
+      html += '<span class="badge badge-success">OK</span>';
+      if (results.length > 1) html += ' Result ' + (idx + 1);
+      html += ' <span class="badge badge-rows">' + result.values.length + ' row' + (result.values.length !== 1 ? 's' : '') + '</span>';
+      html += '</div>' + renderTable(result.columns, result.values) + '</div>';
+    });
+  }
+
+  resultsArea.innerHTML = html;
+  refreshSchema();
+}
+
+function renderTable(columns, rows) {
+  let html = '<div class="data-table-wrapper"><table class="data-table"><thead><tr>';
+  columns.forEach(function(col) { html += '<th>' + escapeHtml(col) + '</th>'; });
+  html += '</tr></thead><tbody>';
+  rows.forEach(function(row) {
+    html += '<tr>';
+    row.forEach(function(val) {
+      html += val === null
+        ? '<td class="null-val">NULL</td>'
+        : '<td>' + escapeHtml(String(val)) + '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// ── SCHEMA ──
+function refreshSchema() {
+  if (!db) return;
+  let tables = [];
+  try {
+    let result = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
+    if (result.length > 0) tables = result[0].values.map(function(r) { return r[0]; });
+  } catch (err) { return; }
+
+  let schemaList = document.getElementById("schemaList");
+
+  if (tables.length === 0) {
+    schemaList.innerHTML = '<div class="no-tables" id="noTablesMsg">' +
+      '<div style="font-size:24px;margin-bottom:8px;">&#128451;</div>' +
+      'No tables yet.<br>Load a database or create tables with SQL.</div>';
+    updateBrowseSelect([]);
+    return;
+  }
+
+  let html = "";
+  tables.forEach(function(table) {
+    let columns = getTableColumns(table);
+    let rowCount = 0;
+    try { rowCount = db.exec("SELECT COUNT(*) FROM \"" + table + "\"")[0].values[0][0]; } catch (e) {}
+
+    html += '<div class="table-item">';
+    html += '<div class="table-header" onclick="toggleTableCols(this)" data-table="' + escapeHtml(table) + '">';
+    html += '<span class="table-icon">&#128451;</span>';
+    html += '<span class="table-name">' + escapeHtml(table) + '</span>';
+    html += '<span class="table-count">' + rowCount + '</span></div>';
+    html += '<div class="table-columns">';
+    columns.forEach(function(col) {
+      let cls = col.pk ? "col-pk" : "";
+      let icon = col.pk ? "&#128273; " : "";
+      html += '<div class="col-item ' + cls + '">' + icon + '<span>' + escapeHtml(col.name) + '</span>';
+      html += '<span class="col-type">' + escapeHtml(col.type || "ANY") + '</span></div>';
+    });
+    html += '</div></div>';
+  });
+
+  schemaList.innerHTML = html;
+  updateBrowseSelect(tables);
+}
+
+function getTableColumns(table) {
+  let columns = [];
+  try {
+    let result = db.exec("PRAGMA table_info(\"" + table + "\")");
+    if (result.length > 0) {
+      result[0].values.forEach(function(row) {
+        columns.push({ cid: row[0], name: row[1], type: row[2], notnull: row[3], defaultVal: row[4], pk: row[5] });
+      });
+    }
+  } catch (e) {}
+  return columns;
+}
+
+function getForeignKeys(table) {
+  let fks = [];
+  try {
+    let result = db.exec("PRAGMA foreign_key_list(\"" + table + "\")");
+    if (result.length > 0) {
+      result[0].values.forEach(function(row) {
+        fks.push({ from: row[3], toTable: row[2], toColumn: row[4] });
+      });
+    }
+  } catch (e) {}
+  return fks;
+}
+
+function toggleTableCols(el) {
+  let colsDiv = el.nextElementSibling;
+  let isShowing = colsDiv.classList.contains("show");
+  document.querySelectorAll(".table-columns.show").forEach(function(d) { d.classList.remove("show"); });
+  document.querySelectorAll(".table-header.active").forEach(function(h) { h.classList.remove("active"); });
+  if (!isShowing) { colsDiv.classList.add("show"); el.classList.add("active"); }
+}
+
+// ── BROWSE DATA ──
+function updateBrowseSelect(tables) {
+  let select = document.getElementById("browseTableSelect");
+  let current = select.value;
+  select.innerHTML = "";
+  if (tables.length === 0) {
+    let opt = document.createElement("option");
+    opt.textContent = "No tables"; opt.disabled = true;
+    select.appendChild(opt); return;
+  }
+  tables.forEach(function(t) {
+    let opt = document.createElement("option");
+    opt.value = t; opt.textContent = t;
+    select.appendChild(opt);
+  });
+  if (current && tables.indexOf(current) !== -1) select.value = current;
+  browseTable();
+}
+
+function browseTable() {
+  let table = document.getElementById("browseTableSelect").value;
+  let area = document.getElementById("browseResults");
+  let countSpan = document.getElementById("browseRowCount");
+  if (!table || !db) { area.innerHTML = '<div class="no-tables" style="padding:40px;">Select a table to browse.</div>'; return; }
+  try {
+    let results = db.exec("SELECT * FROM \"" + table + "\"");
+    if (results.length === 0 || results[0].values.length === 0) {
+      area.innerHTML = '<div class="no-tables" style="padding:40px;">Table "' + escapeHtml(table) + '" is empty.</div>';
+      countSpan.textContent = "0 rows"; return;
+    }
+    countSpan.textContent = results[0].values.length + " rows";
+    area.innerHTML = '<div style="padding:8px;">' + renderTable(results[0].columns, results[0].values) + '</div>';
+  } catch (err) {
+    area.innerHTML = '<div class="result-message error" style="margin:8px;">' + escapeHtml(err.message) + '</div>';
+  }
+}
+
+// ── ERD ──
+function renderErd() {
+  if (!db) return;
+  let canvas = document.getElementById("erdCanvas");
+  let svg = document.getElementById("erdSvg");
+  let empty = document.getElementById("erdEmpty");
+
+  let tables = [];
+  try {
+    let result = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
+    if (result.length > 0) tables = result[0].values.map(function(r) { return r[0]; });
+  } catch (e) { return; }
+
+  if (tables.length === 0) { empty.style.display = "flex"; canvas.innerHTML = ""; svg.innerHTML = ""; return; }
+  empty.style.display = "none";
+  canvas.innerHTML = "";
+  svg.innerHTML = "";
+
+  let cols = Math.ceil(Math.sqrt(tables.length));
+  let xGap = 240;
+  let tableElements = {};
+  let tableData = {};
+
+  tables.forEach(function(table, idx) {
+    let columns = getTableColumns(table);
+    let fks = getForeignKeys(table);
+    let col = idx % cols;
+    let posKey = table;
+    let x, y;
+    if (erdPositions[posKey]) { x = erdPositions[posKey].x; y = erdPositions[posKey].y; }
+    else {
+      x = 30 + col * xGap; y = 30;
+      for (let prev = col; prev < idx; prev += cols) {
+        y += 40 + getTableColumns(tables[prev]).length * 22 + 30;
+      }
+      erdPositions[posKey] = { x: x, y: y };
+    }
+
+    let fkLookup = {};
+    fks.forEach(function(fk) { fkLookup[fk.from] = fk; });
+
+    let el = document.createElement("div");
+    el.className = "erd-table";
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+
+    let colsHtml = '<div class="erd-table-name">' + escapeHtml(table) + '</div>';
+    columns.forEach(function(c) {
+      let cls = c.pk ? "erd-col-pk" : (fkLookup[c.name] ? "erd-col-fk" : "");
+      let prefix = c.pk ? "PK " : (fkLookup[c.name] ? "FK " : "");
+      colsHtml += '<div class="erd-col ' + cls + '"><span class="erd-col-name">' + prefix + escapeHtml(c.name) + '</span>';
+      colsHtml += '<span class="erd-col-type">' + escapeHtml(c.type || "ANY") + '</span></div>';
+    });
+    el.innerHTML = colsHtml;
+    makeDraggable(el, table);
+    canvas.appendChild(el);
+    tableElements[table] = el;
+    tableData[table] = { columns: columns, fks: fks };
+  });
+
+  setTimeout(function() { drawRelationships(tableElements, tableData, svg); }, 50);
+}
+
+function drawRelationships(elements, data, svg) {
+  svg.innerHTML = "";
+  let container = document.getElementById("erdContainer");
+  let cr = container.getBoundingClientRect();
+  let sl = container.scrollLeft;
+  let st = container.scrollTop;
+
+  // Collect all relationships
+  let relationships = [];
+
+  Object.keys(data).forEach(function(table) {
+    let fks = data[table].fks;
+    let fromEl = elements[table];
+    if (!fromEl) return;
+
+    fks.forEach(function(fk) {
+      let toEl = elements[fk.toTable];
+      if (!toEl) return;
+
+      let fr = fromEl.getBoundingClientRect();
+      let tr = toEl.getBoundingClientRect();
+
+      // Centre points of each table
+      let fcx = fr.left + fr.width / 2 - cr.left + sl;
+      let fcy = fr.top + fr.height / 2 - cr.top + st;
+      let tcx = tr.left + tr.width / 2 - cr.left + sl;
+      let tcy = tr.top + tr.height / 2 - cr.top + st;
+
+      // Find the edge intersection points for straight line from centre to centre
+      // from = FK (many) side, to = PK (one) side
+      let p1 = edgePoint(fr, fcx, fcy, tcx, tcy, cr, sl, st);
+      let p2 = edgePoint(tr, tcx, tcy, fcx, fcy, cr, sl, st);
+
+      relationships.push({
+        x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y,
+        fromTable: table, toTable: fk.toTable,
+        fromCol: fk.from, toCol: fk.toColumn
+      });
+    });
+  });
+
+  // Draw each relationship
+  relationships.forEach(function(rel, idx) {
+    let x1 = rel.x1, y1 = rel.y1; // many side (FK child)
+    let x2 = rel.x2, y2 = rel.y2; // one side (PK parent)
+
+    // Angle from many towards one
+    let angle = Math.atan2(y2 - y1, x2 - x1);
+    let cos = Math.cos(angle);
+    let sin = Math.sin(angle);
+
+    // Shorten the main line to leave room for the markers
+    let crowDepth = 12;
+    let oneDepth = 10;
+    let lineX1 = x1 + cos * crowDepth;
+    let lineY1 = y1 + sin * crowDepth;
+    let lineX2 = x2 - cos * oneDepth;
+    let lineY2 = y2 - sin * oneDepth;
+
+    // ── Main straight line ──
+    let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", lineX1);
+    line.setAttribute("y1", lineY1);
+    line.setAttribute("x2", lineX2);
+    line.setAttribute("y2", lineY2);
+    line.setAttribute("class", "erd-line");
+    svg.appendChild(line);
+
+    // ── Crow's foot at many side (x1,y1 — flush against FK table) ──
+    // The three prongs fan out from a point along the line back to the table edge
+    let crowTipX = x1 + cos * crowDepth;
+    let crowTipY = y1 + sin * crowDepth;
+    let spread = 7;
+    let perpX = -sin;
+    let perpY = cos;
+
+    // Centre prong: table edge to tip
+    drawLine(svg, x1, y1, crowTipX, crowTipY, "erd-crow");
+    // Upper prong
+    drawLine(svg, x1 + perpX * spread, y1 + perpY * spread, crowTipX, crowTipY, "erd-crow");
+    // Lower prong
+    drawLine(svg, x1 - perpX * spread, y1 - perpY * spread, crowTipX, crowTipY, "erd-crow");
+
+    // ── "One" marker at PK side (x2,y2 — flush against PK table) ──
+    // A single perpendicular bar near the table edge
+    let barDist = 5;
+    let barX = x2 - cos * barDist;
+    let barY = y2 - sin * barDist;
+    let barHalf = 7;
+    drawLine(svg,
+      barX + perpX * barHalf, barY + perpY * barHalf,
+      barX - perpX * barHalf, barY - perpY * barHalf,
+      "erd-one-mark"
+    );
+    // Second bar slightly further out for the classic "one and only one" look
+    let bar2X = x2 - cos * (barDist + 5);
+    let bar2Y = y2 - sin * (barDist + 5);
+    drawLine(svg,
+      bar2X + perpX * barHalf, bar2Y + perpY * barHalf,
+      bar2X - perpX * barHalf, bar2Y - perpY * barHalf,
+      "erd-one-mark"
+    );
+
+    // ── Label with background pill ──
+    let labelText = rel.fromCol + " \u2192 " + rel.toCol;
+
+    // Stagger labels for relationships between same table pairs
+    let labelT = 0.5;
+    let sameCount = 0;
+    for (let j = 0; j < idx; j++) {
+      let o = relationships[j];
+      if ((o.fromTable === rel.fromTable && o.toTable === rel.toTable) ||
+          (o.fromTable === rel.toTable && o.toTable === rel.fromTable)) {
+        sameCount++;
+      }
+    }
+    if (sameCount > 0) labelT = 0.35 + sameCount * 0.2;
+    if (labelT > 0.75) labelT = 0.3;
+
+    let labelX = x1 + (x2 - x1) * labelT;
+    let labelY = y1 + (y2 - y1) * labelT;
+
+    // Offset perpendicular to line so the label doesn't sit on it
+    let offsetDist = 12;
+    labelX += perpX * offsetDist;
+    labelY += perpY * offsetDist;
+
+    // Background pill
+    let textLen = labelText.length * 5.2 + 12;
+    let bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    bgRect.setAttribute("x", labelX - textLen / 2);
+    bgRect.setAttribute("y", labelY - 8);
+    bgRect.setAttribute("width", textLen);
+    bgRect.setAttribute("height", 15);
+    bgRect.setAttribute("class", "erd-label-bg");
+    svg.appendChild(bgRect);
+
+    let label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", labelX);
+    label.setAttribute("y", labelY + 3);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("class", "erd-label-text");
+    label.textContent = labelText;
+    svg.appendChild(label);
+  });
+}
+
+// Helper: find where a line from centre of rect towards target exits the rect edge
+function edgePoint(rect, cx, cy, targetX, targetY, containerRect, scrollL, scrollT) {
+  let left = rect.left - containerRect.left + scrollL;
+  let right = rect.right - containerRect.left + scrollL;
+  let top = rect.top - containerRect.top + scrollT;
+  let bottom = rect.bottom - containerRect.top + scrollT;
+
+  let dx = targetX - cx;
+  let dy = targetY - cy;
+
+  if (dx === 0 && dy === 0) return { x: cx, y: cy };
+
+  // Check intersection with each edge
+  let candidates = [];
+
+  // Right edge
+  if (dx !== 0) {
+    let t = (right - cx) / dx;
+    if (t > 0) {
+      let iy = cy + t * dy;
+      if (iy >= top && iy <= bottom) candidates.push({ x: right, y: iy, t: t });
+    }
+  }
+  // Left edge
+  if (dx !== 0) {
+    let t = (left - cx) / dx;
+    if (t > 0) {
+      let iy = cy + t * dy;
+      if (iy >= top && iy <= bottom) candidates.push({ x: left, y: iy, t: t });
+    }
+  }
+  // Bottom edge
+  if (dy !== 0) {
+    let t = (bottom - cy) / dy;
+    if (t > 0) {
+      let ix = cx + t * dx;
+      if (ix >= left && ix <= right) candidates.push({ x: ix, y: bottom, t: t });
+    }
+  }
+  // Top edge
+  if (dy !== 0) {
+    let t = (top - cy) / dy;
+    if (t > 0) {
+      let ix = cx + t * dx;
+      if (ix >= left && ix <= right) candidates.push({ x: ix, y: top, t: t });
+    }
+  }
+
+  // Pick the nearest intersection (smallest positive t)
+  if (candidates.length === 0) return { x: cx, y: cy };
+  candidates.sort(function(a, b) { return a.t - b.t; });
+  return { x: candidates[0].x, y: candidates[0].y };
+}
+
+// Helper: draw a simple SVG line with a class
+function drawLine(svg, x1, y1, x2, y2, cls) {
+  let l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  l.setAttribute("x1", x1); l.setAttribute("y1", y1);
+  l.setAttribute("x2", x2); l.setAttribute("y2", y2);
+  l.setAttribute("class", cls);
+  svg.appendChild(l);
+}
+
+function makeDraggable(el, tableName) {
+  let offsetX = 0, offsetY = 0, dragging = false;
+  el.addEventListener("mousedown", function(e) {
+    dragging = true;
+    offsetX = e.clientX - el.offsetLeft;
+    offsetY = e.clientY - el.offsetTop;
+    el.style.zIndex = "10";
+    function onMove(e) {
+      if (!dragging) return;
+      let nx = Math.max(0, e.clientX - offsetX), ny = Math.max(0, e.clientY - offsetY);
+      el.style.left = nx + "px"; el.style.top = ny + "px";
+      erdPositions[tableName] = { x: nx, y: ny };
+      let canvas = document.getElementById("erdCanvas"), svgEl = document.getElementById("erdSvg");
+      let ae = {}, ad = {};
+      canvas.querySelectorAll(".erd-table").forEach(function(t) {
+        let n = t.querySelector(".erd-table-name").textContent;
+        ae[n] = t; ad[n] = { columns: getTableColumns(n), fks: getForeignKeys(n) };
+      });
+      drawRelationships(ae, ad, svgEl);
+    }
+    function onUp() { dragging = false; el.style.zIndex = "2"; document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+}
+
+// ── HISTORY ──
+function addToHistory(sql, success, time) {
+  queryHistory.unshift({ sql: sql, success: success, time: time, timestamp: new Date() });
+  if (queryHistory.length > 100) queryHistory.pop();
+}
+
+function renderHistory() {
+  let list = document.getElementById("historyList");
+  if (queryHistory.length === 0) { list.innerHTML = '<div class="no-tables" style="padding:40px;">No queries run yet.</div>'; return; }
+  let html = "";
+  queryHistory.forEach(function(item, idx) {
+    let icon = item.success ? "&#9989;" : "&#10060;";
+    html += '<div class="history-item" onclick="loadFromHistory(' + idx + ')" title="Click to load">';
+    html += '<div class="history-sql">' + icon + ' ' + escapeHtml(item.sql.substring(0, 120)) + '</div>';
+    html += '<div class="history-meta"><span>' + item.timestamp.toLocaleTimeString() + '</span><span>' + item.time + 'ms</span></div></div>';
+  });
+  list.innerHTML = html;
+}
+
+function loadFromHistory(idx) {
+  if (queryHistory[idx]) { document.getElementById("sqlInput").value = queryHistory[idx].sql; switchTab("sql"); }
+}
+
+function clearHistory() { queryHistory = []; renderHistory(); }
+
+// ── EXAMPLES ──
+function loadExamples() {
+  let examples = [
+    { title: "Create a Table", sql: "CREATE TABLE students (\n  id INTEGER PRIMARY KEY,\n  first_name TEXT NOT NULL,\n  surname TEXT NOT NULL,\n  year_group INTEGER,\n  email TEXT\n);", desc: "Creates a new table with columns and data types." },
+    { title: "Insert Records", sql: "INSERT INTO students (first_name, surname, year_group, email)\nVALUES\n  ('Alice', 'Smith', 12, 'asmith@csfc.ac.uk'),\n  ('Bob', 'Jones', 13, 'bjones@csfc.ac.uk'),\n  ('Charlie', 'Brown', 12, 'cbrown@csfc.ac.uk');", desc: "Adds multiple records in one statement." },
+    { title: "SELECT with WHERE", sql: "SELECT first_name, surname, year_group\nFROM students\nWHERE year_group = 12\nORDER BY surname;", desc: "Retrieves filtered and sorted results." },
+    { title: "Aggregate Functions", sql: "SELECT year_group,\n       COUNT(*) AS total,\n       AVG(year_group) AS avg_year\nFROM students\nGROUP BY year_group;", desc: "Uses COUNT, AVG, and GROUP BY for summaries." },
+    { title: "UPDATE Records", sql: "UPDATE students\nSET email = 'updated@csfc.ac.uk'\nWHERE first_name = 'Alice';", desc: "Modifies existing records matching a condition." },
+    { title: "DELETE Records", sql: "DELETE FROM students\nWHERE id = 3;", desc: "Removes records matching a condition." },
+    { title: "JOIN Two Tables", sql: "-- First, create related tables:\nCREATE TABLE courses (\n  id INTEGER PRIMARY KEY,\n  course_name TEXT NOT NULL\n);\n\nCREATE TABLE enrolments (\n  id INTEGER PRIMARY KEY,\n  student_id INTEGER,\n  course_id INTEGER,\n  FOREIGN KEY (student_id) REFERENCES students(id),\n  FOREIGN KEY (course_id) REFERENCES courses(id)\n);", desc: "Creates related tables with foreign keys for JOIN practice." },
+    { title: "INNER JOIN Query", sql: "SELECT s.first_name, s.surname, c.course_name\nFROM students s\nINNER JOIN enrolments e ON s.id = e.student_id\nINNER JOIN courses c ON e.course_id = c.id\nORDER BY s.surname;", desc: "Combines data from multiple tables using INNER JOIN." },
+    { title: "Subquery", sql: "SELECT first_name, surname\nFROM students\nWHERE id IN (\n  SELECT student_id\n  FROM enrolments\n  WHERE course_id = 1\n);", desc: "Uses a nested query to filter results." },
+    { title: "ALTER TABLE", sql: "ALTER TABLE students\nADD COLUMN date_of_birth TEXT;", desc: "Adds a new column to an existing table." },
+    { title: "CREATE INDEX", sql: "CREATE INDEX idx_students_surname\nON students(surname);", desc: "Creates an index to speed up searches on a column." },
+    { title: "View All Tables", sql: "SELECT name, type\nFROM sqlite_master\nWHERE type IN ('table', 'index', 'view')\nORDER BY type, name;", desc: "Lists all database objects." }
+  ];
+
+  let grid = document.getElementById("examplesGrid");
+  let html = "";
+  examples.forEach(function(ex) {
+    html += '<div class="example-card" onclick="loadExample(this)">';
+    html += '<div class="example-card-title">' + escapeHtml(ex.title) + '</div>';
+    html += '<div class="example-card-sql">' + escapeHtml(ex.sql) + '</div>';
+    html += '<div class="example-card-desc">' + escapeHtml(ex.desc) + '</div></div>';
+  });
+  grid.innerHTML = html;
+}
+
+function loadExample(card) {
+  document.getElementById("sqlInput").value = card.querySelector(".example-card-sql").textContent;
+  switchTab("sql");
+}
+
+// ── SAMPLE DATABASE ──
+function showSampleDb() {
+  if (db) db.close();
+  db = new SQL.Database();
+  let sql = `
+    CREATE TABLE students (id INTEGER PRIMARY KEY, first_name TEXT NOT NULL, surname TEXT NOT NULL, year_group INTEGER NOT NULL, email TEXT, date_of_birth TEXT);
+    CREATE TABLE teachers (id INTEGER PRIMARY KEY, title TEXT, first_name TEXT NOT NULL, surname TEXT NOT NULL, department TEXT);
+    CREATE TABLE subjects (id INTEGER PRIMARY KEY, subject_name TEXT NOT NULL, level TEXT, teacher_id INTEGER, FOREIGN KEY (teacher_id) REFERENCES teachers(id));
+    CREATE TABLE enrolments (id INTEGER PRIMARY KEY, student_id INTEGER NOT NULL, subject_id INTEGER NOT NULL, grade TEXT, FOREIGN KEY (student_id) REFERENCES students(id), FOREIGN KEY (subject_id) REFERENCES subjects(id));
+    CREATE TABLE assignments (id INTEGER PRIMARY KEY, subject_id INTEGER NOT NULL, title TEXT NOT NULL, due_date TEXT, max_marks INTEGER, FOREIGN KEY (subject_id) REFERENCES subjects(id));
+    INSERT INTO teachers VALUES (1,'Mr','James','Harrison','Computer Science'),(2,'Mrs','Sarah','Mitchell','Mathematics'),(3,'Dr','David','Chen','Physics'),(4,'Ms','Emma','Williams','Computer Science'),(5,'Mr','Robert','Taylor','Mathematics');
+    INSERT INTO students VALUES (1,'Alice','Smith',12,'asmith@csfc.ac.uk','2008-03-15'),(2,'Bob','Jones',13,'bjones@csfc.ac.uk','2007-07-22'),(3,'Charlie','Brown',12,'cbrown@csfc.ac.uk','2008-11-01'),(4,'Diana','Patel',13,'dpatel@csfc.ac.uk','2007-01-30'),(5,'Edward','Wilson',12,'ewilson@csfc.ac.uk','2008-06-18'),(6,'Fiona','Garcia',13,'fgarcia@csfc.ac.uk','2007-09-12'),(7,'George','Lee',12,'glee@csfc.ac.uk','2008-02-28'),(8,'Hannah','Murphy',13,'hmurphy@csfc.ac.uk','2007-12-05'),(9,'Isaac','Clark',12,'iclark@csfc.ac.uk','2008-08-20'),(10,'Julia','Adams',13,'jadams@csfc.ac.uk','2007-04-17'),(11,'Kevin','Wright',12,'kwright@csfc.ac.uk','2008-10-09'),(12,'Lily','Thompson',13,'lthompson@csfc.ac.uk','2007-05-25');
+    INSERT INTO subjects VALUES (1,'Computer Science','A Level',1),(2,'Further Mathematics','A Level',2),(3,'Physics','A Level',3),(4,'Mathematics','A Level',5),(5,'Digital Technology','BTEC',4);
+    INSERT INTO enrolments VALUES (1,1,1,'A'),(2,1,4,'B'),(3,2,1,'B'),(4,2,2,'A*'),(5,2,3,'A'),(6,3,1,'C'),(7,3,4,'B'),(8,4,2,'A'),(9,4,3,'B'),(10,5,1,'A'),(11,5,5,'Distinction'),(12,6,4,'A'),(13,6,3,'B'),(14,7,1,'B'),(15,7,4,'C'),(16,8,2,'A*'),(17,8,3,'A'),(18,9,5,'Merit'),(19,9,4,'B'),(20,10,1,'A'),(21,10,2,'B'),(22,11,5,'Distinction'),(23,11,1,'B'),(24,12,3,'A'),(25,12,4,'A');
+    INSERT INTO assignments VALUES (1,1,'SQL Databases Project','2026-03-28',100),(2,1,'Python Programming Task','2026-04-15',80),(3,4,'Calculus Problem Set','2026-03-20',50),(4,3,'Mechanics Practical','2026-04-01',60),(5,2,'Complex Numbers Assessment','2026-03-25',75),(6,5,'Web Development Portfolio','2026-04-30',120);
+  `;
+  try {
+    db.run(sql);
+    erdPositions = {};
+    refreshSchema();
+    switchTab("sql");
+    document.getElementById("sqlInput").value = "-- Sample database loaded!\n-- Try some queries:\n\nSELECT s.first_name, s.surname, sub.subject_name, e.grade\nFROM students s\nINNER JOIN enrolments e ON s.id = e.student_id\nINNER JOIN subjects sub ON e.subject_id = sub.id\nORDER BY s.surname, sub.subject_name;";
+    updateStatus("Sample database loaded (5 tables)", true);
+    showNotification("Sample database loaded with students, teachers, subjects, enrolments, and assignments", "success");
+  } catch (err) {
+    showNotification("Error creating sample database: " + err.message, "error");
+  }
+}
+
+// ── CSV EXPORT ──
+function exportResultsCsv() {
+  if (!lastResults || lastResults.length === 0) { showNotification("No results to export. Run a query first.", "error"); return; }
+  let result = lastResults[0];
+  let csv = result.columns.map(function(c) { return '"' + c.replace(/"/g, '""') + '"'; }).join(",") + "\n";
+  result.values.forEach(function(row) {
+    csv += row.map(function(val) { return val === null ? "" : '"' + String(val).replace(/"/g, '""') + '"'; }).join(",") + "\n";
+  });
+  let blob = new Blob([csv], { type: "text/csv" });
+  let url = URL.createObjectURL(blob);
+  let a = document.createElement("a"); a.href = url; a.download = "query_results.csv"; a.click();
+  URL.revokeObjectURL(url);
+  showNotification("Results exported as CSV", "success");
+}
+
+// ── TABS ──
+function switchTab(tabId) {
+  document.querySelectorAll(".tab").forEach(function(t) { t.classList.remove("active"); });
+  document.querySelectorAll(".panel").forEach(function(p) { p.classList.remove("active"); });
+  document.querySelector('[data-tab="' + tabId + '"]').classList.add("active");
+  document.getElementById("panel-" + tabId).classList.add("active");
+  if (tabId === "browse") browseTable();
+  if (tabId === "erd") renderErd();
+  if (tabId === "history") renderHistory();
+}
+
+// ── RESIZE ──
+function setupResize() {
+  let handle = document.getElementById("resizeHandle");
+  let container = document.getElementById("editorContainer");
+  handle.addEventListener("mousedown", function(e) {
+    let startY = e.clientY, startH = container.offsetHeight;
+    handle.classList.add("dragging");
+    function onMove(e) { container.style.flex = "0 0 " + Math.max(80, startH + (e.clientY - startY)) + "px"; }
+    function onUp() { handle.classList.remove("dragging"); document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+}
+
+// ── UTILITIES ──
+function updateStatus(text, connected) {
+  document.getElementById("statusText").textContent = text;
+  document.getElementById("statusDot").className = "status-dot " + (connected ? "connected" : "empty");
+}
+
+function clearEditor() { document.getElementById("sqlInput").value = ""; document.getElementById("sqlInput").focus(); }
+
+function clearResults() {
+  document.getElementById("resultsArea").innerHTML =
+    '<div class="welcome" id="welcomeScreen">' +
+    '<div class="welcome-logo">SQL</div>' +
+    '<h2>Welcome to the CSFC SQL Editor</h2>' +
+    '<p>Write SQL queries to create, modify, and interrogate databases &mdash; everything runs entirely in your browser using WebAssembly.</p>' +
+    '<div class="welcome-actions">' +
+    '<button class="btn" onclick="showSampleDb()">&#128218; Load Sample DB</button>' +
+    '<button class="btn" onclick="openDbFile()">&#128194; Open .db File</button>' +
+    '<button class="btn" onclick="openSqlFile()">&#128220; Load .sql File</button>' +
+    '<button class="btn" onclick="openCsvFile()">&#128203; Import CSV</button>' +
+    '</div></div>';
+}
+
+function escapeHtml(str) {
+  let div = document.createElement("div");
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+function showNotification(msg, type) {
+  let el = document.createElement("div");
+  el.style.cssText = "position:fixed;top:60px;right:20px;z-index:200;padding:10px 16px;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;max-width:400px;box-shadow:0 8px 24px var(--shadow);";
+  el.style.background = type === "success" ? "var(--success-bg)" : "var(--error-bg)";
+  el.style.border = "1px solid " + (type === "success" ? "var(--success)" : "var(--error)");
+  el.style.color = type === "success" ? "var(--success)" : "var(--error)";
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(function() { el.style.opacity = "0"; el.style.transition = "opacity 0.3s"; setTimeout(function() { el.remove(); }, 300); }, 3000);
+}
+
+// ── START ──
+init();
+</script>
+</body>
+</html>
